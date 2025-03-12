@@ -23,7 +23,8 @@ const game = {
         isAttacking: false // Flag for attack state
     },
     controls: {
-        attack: false  // Attack control flag
+        attack1: false,  // First attack control flag
+        attack2: false   // Second attack control flag
     }
 };
 
@@ -44,6 +45,7 @@ async function init() {
         game.assets.background = await loadImage('assets/sprites/background.png');
         game.assets.idle = await loadImage('assets/sprites/idle.png');
         game.assets.attack1 = await loadImage('assets/sprites/ATTACK 1.png');
+        game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
         
         // Set up event listeners
         setupEventListeners();
@@ -60,15 +62,21 @@ async function init() {
 function setupEventListeners() {
     // Keydown event
     window.addEventListener('keydown', (e) => {
-        if (e.code === 'ControlLeft' && !game.player.isAttacking) {
-            game.controls.attack = true;
+        if (e.code === 'KeyZ' && !game.player.isAttacking) {
+          game.controls.attack1 = true;
+        }
+        if (e.code === 'KeyX' && !game.player.isAttacking) {
+          game.controls.attack2 = true;
         }
     });
     
     // Keyup event
     window.addEventListener('keyup', (e) => {
-        if (e.code === 'ControlLeft') {
-            game.controls.attack = false;
+        if (e.code === 'KeyZ') {
+            game.controls.attack1 = false;
+        }
+        if (e.code === 'KeyX') {
+            game.controls.attack2 = false;
         }
     });
 }
@@ -98,18 +106,22 @@ function gameLoop() {
 
 // Handle player input
 function handlePlayerInput() {
-    // Handle attack input
-    if (game.controls.attack && !game.player.isAttacking) {
-        startAttack();
+    // Handle first attack input
+    if (game.controls.attack1 && !game.player.isAttacking) {
+        startAttack('attack1');
+    }
+    // Handle second attack input
+    else if (game.controls.attack2 && !game.player.isAttacking) {
+        startAttack('attack2');
     }
 }
 
 // Start attack animation
-function startAttack() {
+function startAttack(attackType) {
     game.player.isAttacking = true;
-    game.player.state = 'attack1';
+    game.player.state = attackType;
     game.player.frameX = 0;  // Reset to first frame
-    game.player.frameCount = 6;  // Attack animation has 6 frames
+    game.player.frameCount = 6;  // Both attack animations have 6 frames
     game.player.attackTimer = 0; // Reset attack timer
 }
 
