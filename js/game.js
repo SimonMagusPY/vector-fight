@@ -20,11 +20,16 @@ const game = {
         frameCounter: 0, // Counter for animation timing
         state: 'idle',   // Current animation state
         attackTimer: 0,  // Timer for attack animation
-        isAttacking: false // Flag for attack state
+        isAttacking: false, // Flag for attack state
+        speed: 3,  // Walking speed in pixels per frame
+        direction: 1,  // 1 for right, -1 for left
+        isWalking: false  // Flag for walking state
     },
     controls: {
         attack1: false,  // First attack control flag
-        attack2: false   // Second attack control flag
+        attack2: false,   // Second attack control flag
+        left: false,
+        right: false
     }
 };
 
@@ -46,6 +51,7 @@ async function init() {
         game.assets.idle = await loadImage('assets/sprites/idle.png');
         game.assets.attack1 = await loadImage('assets/sprites/ATTACK 1.png');
         game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
+        game.assets.walk = await loadImage('assets/sprites/WALK.png');
         
         // Set up event listeners
         setupEventListeners();
@@ -58,7 +64,7 @@ async function init() {
     }
 }
 
-// Set up keyboard event listeners
+// Update setupEventListeners
 function setupEventListeners() {
     // Keydown event
     window.addEventListener('keydown', (e) => {
@@ -67,6 +73,12 @@ function setupEventListeners() {
         }
         if (e.code === 'KeyX' && !game.player.isAttacking) {
           game.controls.attack2 = true;
+        }
+        if (e.code === 'ArrowLeft') {
+            game.controls.left = true;
+        }
+        if (e.code === 'ArrowRight') {
+            game.controls.right = true;
         }
     });
     
@@ -77,6 +89,12 @@ function setupEventListeners() {
         }
         if (e.code === 'KeyX') {
             game.controls.attack2 = false;
+        }
+        if (e.code === 'ArrowLeft') {
+            game.controls.left = false;
+        }
+        if (e.code === 'ArrowRight') {
+            game.controls.right = false;
         }
     });
 }
@@ -106,6 +124,36 @@ function gameLoop() {
 
 // Handle player input
 function handlePlayerInput() {
+    // Handle movement (but not while attacking)
+    if (!game.player.isAttacking) {
+        game.player.isWalking = false;
+        
+        if (game.controls.left) {
+            game.player.x -= game.player.speed;
+            game.player.direction = -1;
+            game.player.isWalking = true;
+        }
+        
+        if (game.controls.right) {
+            game.player.x += game.player.speed;
+            game.player.direction = 1;
+            game.player.isWalking = true;
+        }
+        
+        // Update player state to walking if moving
+        if (game.player.isWalking && game.player.state !== 'walk') {
+            game.player.state = 'walk';
+            game.player.frameX = 0;
+            game.player.frameCount = 8; // Walk animation has 8 frames
+        }
+        // Reset to idle if not walking or attacking
+        else if (!game.player.isWalking && game.player.state !== 'idle') {
+            game.player.state = 'idle';
+            game.player.frameX = 0;
+            game.player.frameCount = 7; // Idle has 7 frames
+        }
+    }
+    
     // Handle first attack input
     if (game.controls.attack1 && !game.player.isAttacking) {
         startAttack('attack1');
@@ -114,6 +162,10 @@ function handlePlayerInput() {
     else if (game.controls.attack2 && !game.player.isAttacking) {
         startAttack('attack2');
     }
+    
+    // Keep player within the screen bounds
+    if (game.player.x < 0) game.player.x = 0;
+    if (game.player.x > game.width) game.player.x = game.width;
 }
 
 // Start attack animation
@@ -157,7 +209,7 @@ function updatePlayerAnimation() {
     }
 }
 
-// Draw the player character
+// Update drawPlayer function to handle direction
 function drawPlayer() {
     // Get the sprite sheet based on current state
     const spriteSheet = game.assets[game.player.state];
@@ -167,6 +219,15 @@ function drawPlayer() {
     // Calculate the single frame width (total width / number of frames)
     const frameWidth = spriteSheet.width / game.player.frameCount;
     const frameHeight = spriteSheet.height;
+    
+    // Save context state before applying transformations
+    ctx.save();
+    
+    // If facing left, flip the character
+    if (game.player.direction === -1) {
+        ctx.translate(game.player.x * 2, 0);
+        ctx.scale(-1, 1);
+    }
     
     // Draw the current frame
     ctx.drawImage(
@@ -181,14 +242,8 @@ function drawPlayer() {
         game.player.height  // Destination height
     );
     
-    // Debug: Draw bounding box
-    // ctx.strokeStyle = 'red';
-    // ctx.strokeRect(
-    //     game.player.x - game.player.width / 2,
-    //     game.player.y - game.player.height / 2,
-    //     game.player.width, 
-    //     game.player.height
-    // );
+    // Restore context state
+    ctx.restore();
 }
 
 // Start the game when page loads
