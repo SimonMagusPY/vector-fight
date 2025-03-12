@@ -1,0 +1,59 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+    background-color: #000000;
+    border: 2px solid #ffffff;
+}
+
+h1, h2, h3 {
+    text-align: center;
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.menu button {
+    background-color: #ff5722;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    margin: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.3s;
+}
+
+.menu button:hover {
+    background-color: #e64a19;
+}
+
+.hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 20px;
+}
+
+.health-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #444;
+    border: 1px solid #fff;
+}
+
+.health {
+    height: 100%;
+    background-color: #76ff03;
+}
