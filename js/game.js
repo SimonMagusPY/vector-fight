@@ -23,13 +23,22 @@ const game = {
         isAttacking: false, // Flag for attack state
         speed: 3,  // Walking speed in pixels per frame
         direction: 1,  // 1 for right, -1 for left
-        isWalking: false  // Flag for walking state
+        isWalking: false,  // Flag for walking state
+        isJumping: false,
+        jumpTimer: 0,
+        jumpFrameCount: 5, // Jump animation has 5 frames
+        jumpHeight: 150,      // Maximum height of jump in pixels
+        jumpSpeed: 8,         // Initial jump velocity
+        gravity: 0.5,         // Gravity pulling player down
+        velocityY: 0,         // Vertical velocity
+        groundY: 450          // Ground position (same as initial y)
     },
     controls: {
         attack1: false,  // First attack control flag
         attack2: false,   // Second attack control flag
         left: false,
-        right: false
+        right: false,
+        jump: false // Add jump control
     }
 };
 
@@ -52,6 +61,7 @@ async function init() {
         game.assets.attack1 = await loadImage('assets/sprites/ATTACK 1.png');
         game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
         game.assets.walk = await loadImage('assets/sprites/WALK.png');
+        game.assets.jump = await loadImage('assets/sprites/JUMP.png'); // Add jump sprite
         
         // Set up event listeners
         setupEventListeners();
@@ -80,6 +90,9 @@ function setupEventListeners() {
         if (e.code === 'ArrowRight') {
             game.controls.right = true;
         }
+        if (e.code === 'Space' && !game.player.isJumping) {
+            game.controls.jump = true;
+        }
     });
     
     // Keyup event
@@ -95,6 +108,9 @@ function setupEventListeners() {
         }
         if (e.code === 'ArrowRight') {
             game.controls.right = false;
+        }
+        if (e.code === 'Space') {
+            game.controls.jump = false;
         }
     });
 }
@@ -124,6 +140,11 @@ function gameLoop() {
 
 // Handle player input
 function handlePlayerInput() {
+    // Handle jump input
+    if (game.controls.jump && !game.player.isJumping && !game.player.isAttacking) {
+        startJump();
+    }
+    
     // Handle movement (but not while attacking)
     if (!game.player.isAttacking) {
         game.player.isWalking = false;
@@ -163,6 +184,21 @@ function handlePlayerInput() {
         startAttack('attack2');
     }
     
+    // Apply jump physics if player is jumping
+    if (game.player.isJumping) {
+        // Apply gravity to velocity
+        game.player.velocityY += game.player.gravity;
+        
+        // Move player vertically based on velocity
+        game.player.y += game.player.velocityY;
+        
+        // Check if player has landed
+        if (game.player.y >= game.player.groundY) {
+            game.player.y = game.player.groundY;
+            game.player.velocityY = 0;
+        }
+    }
+    
     // Keep player within the screen bounds
     if (game.player.x < 0) game.player.x = 0;
     if (game.player.x > game.width) game.player.x = game.width;
@@ -175,6 +211,20 @@ function startAttack(attackType) {
     game.player.frameX = 0;  // Reset to first frame
     game.player.frameCount = 6;  // Both attack animations have 6 frames
     game.player.attackTimer = 0; // Reset attack timer
+}
+
+// Modify the startJump function to add physics
+function startJump() {
+    if (!game.player.isJumping) {
+        game.player.isJumping = true;
+        game.player.state = 'jump';
+        game.player.frameX = 0;  // Reset to first frame
+        game.player.frameCount = game.player.jumpFrameCount;
+        game.player.jumpTimer = 0;
+        
+        // Apply initial upward velocity
+        game.player.velocityY = -game.player.jumpSpeed;
+    }
 }
 
 // Draw the background
@@ -201,6 +251,19 @@ function updatePlayerAnimation() {
             // If we've gone through all attack frames, return to idle
             if (game.player.attackTimer >= game.player.frameCount) {
                 game.player.isAttacking = false;
+                game.player.state = 'idle';
+                game.player.frameCount = 7; // Reset to idle frame count
+                game.player.frameX = 0; // Reset animation frame
+            }
+        }
+        
+        // Handle jump completion - only reset state when player has landed
+        if (game.player.isJumping) {
+            game.player.jumpTimer++;
+            
+            // If we've gone through all jump frames AND player has landed, return to idle
+            if (game.player.jumpTimer >= game.player.frameCount && game.player.y >= game.player.groundY) {
+                game.player.isJumping = false;
                 game.player.state = 'idle';
                 game.player.frameCount = 7; // Reset to idle frame count
                 game.player.frameX = 0; // Reset animation frame
