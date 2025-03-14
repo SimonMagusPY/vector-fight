@@ -43,6 +43,17 @@ const game = {
         left: false,
         right: false,
         jump: false 
+    },
+    camera: {
+        x: 0,           // Camera's x position in the world
+        deadZoneWidth: 200,  // Player can move freely within this width without scrolling
+    },
+    world: {
+        width: 2400,    // Total world width (3x canvas width)
+        bounds: {
+            left: 0,
+            right: 2400
+        }
     }
 };
 
@@ -203,9 +214,12 @@ function handlePlayerInput() {
         }
     }
     
-    // Keep player within the screen bounds
+    // Update camera position based on player position
+    updateCamera();
+    
+    // Keep player within the world bounds (not just screen bounds)
     if (game.player.x < 0) game.player.x = 0;
-    if (game.player.x > game.width) game.player.x = game.width;
+    if (game.player.x > game.world.width) game.player.x = game.world.width;
 }
 
 // Start attack animation
@@ -240,22 +254,28 @@ function drawBackground() {
     // Calculate aspect ratio of the image
     const imgAspect = imgWidth / imgHeight;
     
-    // Calculate dimensions to maintain aspect ratio while filling canvas
-    let drawWidth = game.width;
-    let drawHeight = game.width / imgAspect;
+    // Calculate dimensions to maintain aspect ratio while filling canvas height
+    let drawHeight = game.height;
+    let drawWidth = game.height * imgAspect;
     
-    // If height is too small, scale based on height instead
-    if (drawHeight < game.height) {
-        drawHeight = game.height;
-        drawWidth = game.height * imgAspect;
+    // Calculate position to center the image vertically
+    const y = 0;
+    
+    // Apply camera position (parallax effect)
+    // Multiply by 0.8 for a slight parallax effect (background moves slower than foreground)
+    const cameraOffset = game.camera.x * 0.8;
+    
+    // Draw multiple background images to cover the entire level width
+    const numBackgrounds = Math.ceil(game.world.width / drawWidth) + 1;
+    const startIndex = Math.floor(cameraOffset / drawWidth);
+    
+    for (let i = 0; i < numBackgrounds; i++) {
+        const x = i * drawWidth - (cameraOffset % drawWidth);
+        
+        if (x < -drawWidth || x > game.width) continue; // Skip if offscreen
+        
+        ctx.drawImage(game.assets.background, x, y, drawWidth, drawHeight);
     }
-    
-    // Calculate position to center the image
-    const x = (game.width - drawWidth) / 2;
-    const y = (game.height - drawHeight) / 2;
-    
-    // Draw the background image with proper aspect ratio
-    ctx.drawImage(game.assets.background, x, y, drawWidth, drawHeight);
 }
 
 // Update player animation frames
@@ -307,12 +327,15 @@ function drawPlayer() {
     const frameWidth = spriteSheet.width / game.player.frameCount;
     const frameHeight = spriteSheet.height;
     
+    // Calculate player's position on screen (relative to camera)
+    const screenX = game.player.x - game.camera.x;
+    
     // Save context state before applying transformations
     ctx.save();
     
     // If facing left, flip the character
     if (game.player.direction === -1) {
-        ctx.translate(game.player.x * 2, 0);
+        ctx.translate(screenX * 2, 0);
         ctx.scale(-1, 1);
     }
     
@@ -323,7 +346,7 @@ function drawPlayer() {
         game.player.frameY * frameHeight, // Source Y (current row)
         frameWidth,  // Source width (single frame)
         frameHeight, // Source height
-        game.player.x - game.player.width / 2, // Destination X (centered)
+        game.player.direction === 1 ? screenX - game.player.width / 2 : screenX - game.player.width / 2, // Destination X (centered)
         game.player.y - game.player.height / 2, // Destination Y (centered)
         game.player.width,  // Destination width
         game.player.height  // Destination height
@@ -331,6 +354,33 @@ function drawPlayer() {
     
     // Restore context state
     ctx.restore();
+}
+
+// Add a new function to update the camera position
+function updateCamera() {
+    // Calculate the center of the screen
+    const screenCenterX = game.width / 2;
+    
+    // Calculate the dead zone boundaries
+    const deadZoneLeft = screenCenterX - game.camera.deadZoneWidth / 2;
+    const deadZoneRight = screenCenterX + game.camera.deadZoneWidth / 2;
+    
+    // Calculate player's position relative to the camera
+    const playerScreenX = game.player.x - game.camera.x;
+    
+    // Update camera if player is outside the dead zone
+    if (playerScreenX < deadZoneLeft) {
+        game.camera.x = game.player.x - deadZoneLeft;
+    } else if (playerScreenX > deadZoneRight) {
+        game.camera.x = game.player.x - deadZoneRight;
+    }
+    
+    // Keep camera within world bounds
+    if (game.camera.x < game.world.bounds.left) {
+        game.camera.x = game.world.bounds.left;
+    } else if (game.camera.x > game.world.bounds.right - game.width) {
+        game.camera.x = game.world.bounds.right - game.width;
+    }
 }
 
 // Start the game when page loads
