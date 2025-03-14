@@ -2,6 +2,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Resize the canvas
+canvas.width = 800;  // Make canvas wider
+canvas.height = 600; // Make canvas taller
+
 // Game state
 const game = {
     width: canvas.width,
@@ -10,7 +14,7 @@ const game = {
     assets: {},
     player: {
         x: 400,  // Starting position (center of canvas)
-        y: 450,  // Near bottom of canvas
+        y: 520,  // Adjust this to place character on ground level
         width: 128,  // Character width (adjust based on your sprite)
         height: 128, // Character height (adjust based on your sprite)
         frameX: 0,   // Current frame in the sprite sheet
@@ -31,14 +35,14 @@ const game = {
         jumpSpeed: 8,         // Initial jump velocity
         gravity: 0.5,         // Gravity pulling player down
         velocityY: 0,         // Vertical velocity
-        groundY: 450          // Ground position (same as initial y)
+        groundY: 520          // Ground position (same as initial y, adjust based on background)
     },
     controls: {
-        attack1: false,  // First attack control flag
-        attack2: false,   // Second attack control flag
+        attack1: false,  
+        attack2: false,   
         left: false,
         right: false,
-        jump: false // Add jump control
+        jump: false 
     }
 };
 
@@ -56,7 +60,7 @@ function loadImage(path) {
 async function init() {
     try {
         // Load game assets
-        game.assets.background = await loadImage('assets/sprites/background.png');
+        game.assets.background = await loadImage('assets/sprites/night_bg_2.jpg');
         game.assets.idle = await loadImage('assets/sprites/idle.png');
         game.assets.attack1 = await loadImage('assets/sprites/ATTACK 1.png');
         game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
@@ -229,9 +233,29 @@ function startJump() {
 
 // Draw the background
 function drawBackground() {
-    const pattern = ctx.createPattern(game.assets.background, 'repeat');
-    ctx.fillStyle = pattern;
-    ctx.fillRect(0, 0, game.width, game.height);
+    // Get background image dimensions
+    const imgWidth = game.assets.background.width;
+    const imgHeight = game.assets.background.height;
+    
+    // Calculate aspect ratio of the image
+    const imgAspect = imgWidth / imgHeight;
+    
+    // Calculate dimensions to maintain aspect ratio while filling canvas
+    let drawWidth = game.width;
+    let drawHeight = game.width / imgAspect;
+    
+    // If height is too small, scale based on height instead
+    if (drawHeight < game.height) {
+        drawHeight = game.height;
+        drawWidth = game.height * imgAspect;
+    }
+    
+    // Calculate position to center the image
+    const x = (game.width - drawWidth) / 2;
+    const y = (game.height - drawHeight) / 2;
+    
+    // Draw the background image with proper aspect ratio
+    ctx.drawImage(game.assets.background, x, y, drawWidth, drawHeight);
 }
 
 // Update player animation frames
