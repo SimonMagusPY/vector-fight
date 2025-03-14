@@ -35,14 +35,18 @@ const game = {
         jumpSpeed: 8,         // Initial jump velocity
         gravity: 0.5,         // Gravity pulling player down
         velocityY: 0,         // Vertical velocity
-        groundY: 520          // Ground position (same as initial y, adjust based on background)
+        groundY: 520,         // Ground position (same as initial y, adjust based on background)
+        isRunning: false,
+        runSpeed: 6,  // Running is faster than walking
+        runFrameCount: 8  // Assuming 8 frames in the run animation
     },
     controls: {
         attack1: false,  
         attack2: false,   
         left: false,
         right: false,
-        jump: false 
+        jump: false,
+        shift: false  // Add shift control for running
     },
     camera: {
         x: 0,           // Camera's x position in the world
@@ -77,6 +81,7 @@ async function init() {
         game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
         game.assets.walk = await loadImage('assets/sprites/WALK.png');
         game.assets.jump = await loadImage('assets/sprites/JUMP.png'); // Add jump sprite
+        game.assets.run = await loadImage('assets/sprites/RUN.PNG');
         
         // Set up event listeners
         setupEventListeners();
@@ -108,6 +113,9 @@ function setupEventListeners() {
         if (e.code === 'Space' && !game.player.isJumping) {
             game.controls.jump = true;
         }
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+            game.controls.shift = true;
+        }
     });
     
     // Keyup event
@@ -126,6 +134,9 @@ function setupEventListeners() {
         }
         if (e.code === 'Space') {
             game.controls.jump = false;
+        }
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+            game.controls.shift = false;
         }
     });
 }
@@ -162,31 +173,40 @@ function handlePlayerInput() {
     
     // Handle movement (but not while attacking)
     if (!game.player.isAttacking) {
-        game.player.isWalking = false;
+        let isMoving = false;
         
+        // Determine if player is running
+        const isRunning = game.controls.shift && (game.controls.left || game.controls.right);
+        const currentSpeed = isRunning ? game.player.runSpeed : game.player.speed;
+        
+        // Move left
         if (game.controls.left) {
-            game.player.x -= game.player.speed;
-            game.player.direction = -1;
-            game.player.isWalking = true;
+            game.player.x -= currentSpeed;
+            game.player.direction = -1; // Face left
+            isMoving = true;
         }
         
+        // Move right
         if (game.controls.right) {
-            game.player.x += game.player.speed;
-            game.player.direction = 1;
-            game.player.isWalking = true;
+            game.player.x += currentSpeed;
+            game.player.direction = 1; // Face right
+            isMoving = true;
         }
         
-        // Update player state to walking if moving
-        if (game.player.isWalking && game.player.state !== 'walk') {
-            game.player.state = 'walk';
-            game.player.frameX = 0;
-            game.player.frameCount = 8; // Walk animation has 8 frames
-        }
-        // Reset to idle if not walking or attacking
-        else if (!game.player.isWalking && game.player.state !== 'idle') {
+        // Update player state
+        if (isMoving) {
+            // Set animation state based on whether running or walking
+            if (isRunning && !game.player.isJumping) {
+                game.player.state = 'run';
+                game.player.frameCount = game.player.runFrameCount;
+            } else if (!game.player.isJumping) {
+                game.player.state = 'walk';
+                game.player.frameCount = 8; // Walk animation has 8 frames
+            }
+        } else if (!game.player.isJumping) {
+            // Reset to idle if not moving or jumping
             game.player.state = 'idle';
-            game.player.frameX = 0;
-            game.player.frameCount = 7; // Idle has 7 frames
+            game.player.frameCount = 7; // Idle animation has 7 frames
         }
     }
     
