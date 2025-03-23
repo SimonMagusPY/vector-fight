@@ -4,6 +4,7 @@ import { updateCamera } from './camera.js';
 import { drawBackground } from './background.js';
 import { setupEventListeners } from './input.js';
 import { loadAssets } from './assets.js';
+import { boar, initBoar, updateBoar, drawBoar, loadBoarAssets } from './boar.js';
 
 // Get the canvas element and its context
 const canvas = document.getElementById('gameCanvas');
@@ -49,6 +50,10 @@ async function init() {
             throw new Error('Failed to load assets');
         }
         
+        // Initialize boar enemy
+        await loadBoarAssets(game);
+        initBoar(game);
+        
         // Set up event listeners
         setupEventListeners(game, player);
         
@@ -76,8 +81,14 @@ function gameLoop() {
     // Update player animation
     updatePlayerAnimation();
     
+    // Update boar enemy
+    updateBoar(game, player);
+    
     // Draw player
     drawPlayer(ctx, game);
+    
+    // Draw boar
+    drawBoar(ctx, game);
     
     // Continue the loop
     requestAnimationFrame(gameLoop);

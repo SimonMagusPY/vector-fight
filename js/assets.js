@@ -13,12 +13,12 @@ export async function loadAssets(game) {
     try {
         // Load game assets
         game.assets.background = await loadImage('assets/sprites/night_bg_2.jpg');
-        game.assets.idle = await loadImage('assets/sprites/idle.png');
-        game.assets.attack1 = await loadImage('assets/sprites/ATTACK 1.png');
-        game.assets.attack2 = await loadImage('assets/sprites/ATTACK 3.png');
-        game.assets.walk = await loadImage('assets/sprites/WALK.png');
-        game.assets.jump = await loadImage('assets/sprites/JUMP.png');
-        game.assets.run = await loadImage('assets/sprites/RUN.PNG');
+        game.assets.idle = await loadImage('assets/sprites/knight/idle.png');
+        game.assets.attack1 = await loadImage('assets/sprites/knight/attack_1.png');
+        game.assets.attack2 = await loadImage('assets/sprites/knight/attack_2.png');
+        game.assets.walk = await loadImage('assets/sprites/knight/WALK.png');
+        game.assets.jump = await loadImage('assets/sprites/knight/JUMP.png');
+        game.assets.run = await loadImage('assets/sprites/knight/RUN.PNG');
         
         return true;
     } catch (error) {
