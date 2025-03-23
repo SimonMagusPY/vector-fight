@@ -1,10 +1,10 @@
 // Import modules
-import { player, handlePlayerInput, updatePlayerAnimation, drawPlayer } from './player.js';
+import { player, handlePlayerInput, updatePlayerAnimation, drawPlayer, getPlayerAttackHitbox } from './player.js';
 import { updateCamera } from './camera.js';
 import { drawBackground } from './background.js';
 import { setupEventListeners } from './input.js';
 import { loadAssets } from './assets.js';
-import { boar, initBoar, updateBoar, drawBoar, loadBoarAssets } from './boar.js';
+import { boar, initBoar, updateBoar, drawBoar, loadBoarAssets, damageBoar, checkBoarCollision } from './boar.js';
 
 // Get the canvas element and its context
 const canvas = document.getElementById('gameCanvas');
@@ -65,6 +65,31 @@ async function init() {
     }
 }
 
+// Add collision detection function
+function checkPlayerAttackHit() {
+    // Only check during attack animation
+    if (!player.isAttacking || player.hasHitTarget) return false;
+    
+    // Only register hits during middle frames of attack animation (when sword is extended)
+    if (player.frameX < 2 || player.frameX > 4) return false;
+    
+    const attackHitbox = getPlayerAttackHitbox();
+    const boarHitbox = {
+        x: boar.x - boar.width / 3,
+        y: boar.y - boar.height / 3,
+        width: boar.width * 2/3,
+        height: boar.height * 2/3
+    };
+    
+    // Check for intersection
+    return (
+        attackHitbox.x < boarHitbox.x + boarHitbox.width &&
+        attackHitbox.x + attackHitbox.width > boarHitbox.x &&
+        attackHitbox.y < boarHitbox.y + boarHitbox.height &&
+        attackHitbox.y + attackHitbox.height > boarHitbox.y
+    );
+}
+
 // Game loop
 function gameLoop() {
     if (!game.isRunning) return;
@@ -84,11 +109,21 @@ function gameLoop() {
     // Update boar enemy
     updateBoar(game, player);
     
+    // Check player's attack hitting boar
+    if (player.isAttacking && !player.hasHitTarget && checkPlayerAttackHit()) {
+        // Player hit the boar!
+        damageBoar(player.attackDamage);
+        player.hasHitTarget = true; // Prevent multiple hits from same attack
+    }
+    
     // Draw player
     drawPlayer(ctx, game);
     
     // Draw boar
     drawBoar(ctx, game);
+    
+    // Optional: Draw attack hitbox for debugging
+    // drawPlayerAttackHitbox(ctx, game);
     
     // Continue the loop
     requestAnimationFrame(gameLoop);

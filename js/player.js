@@ -25,7 +25,13 @@ export const player = {
     groundY: 520,      // Ground position
     isRunning: false,
     runSpeed: 6,       // Running is faster than walking
-    runFrameCount: 8   // Assuming 8 frames in the run animation
+    runFrameCount: 8,  // Assuming 8 frames in the run animation
+    
+    // Combat properties
+    attackDamage: 25,       // Damage dealt with each attack
+    attackHitboxWidth: 80,  // Width of attack hitbox in front of player
+    attackHitboxHeight: 100, // Height of attack hitbox
+    hasHitTarget: false,    // Flag to prevent multiple hits in one attack
 };
 
 // Start attack animation
@@ -35,6 +41,7 @@ export function startAttack(attackType) {
     player.frameX = 0;  // Reset to first frame
     player.frameCount = 6;  // Both attack animations have 6 frames
     player.attackTimer = 0; // Reset attack timer
+    player.hasHitTarget = false; // Reset hit flag for new attack
 }
 
 // Start jump animation and physics
@@ -204,5 +211,39 @@ export function drawPlayer(ctx, game) {
     );
     
     // Restore context state
+    ctx.restore();
+}
+
+// Add this function to player.js
+export function getPlayerAttackHitbox() {
+    // Attack hitbox is offset in front of the player based on direction
+    const hitboxOffsetX = player.direction === 1 ? player.width / 4 : -player.width / 4 - player.attackHitboxWidth;
+    
+    return {
+        x: player.x + hitboxOffsetX,
+        y: player.y - player.attackHitboxHeight / 2,
+        width: player.attackHitboxWidth,
+        height: player.attackHitboxHeight
+    };
+}
+
+// Optional: Function to draw the attack hitbox (for debugging)
+export function drawPlayerAttackHitbox(ctx, game) {
+    if (!player.isAttacking) return;
+    
+    // Only show hitbox in attack frames 2-4 (when sword is swinging)
+    if (player.frameX < 1 || player.frameX > 4) return;
+    
+    const hitbox = getPlayerAttackHitbox();
+    const screenX = hitbox.x - game.camera.x;
+    
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+    ctx.lineWidth = 2;
+    
+    ctx.fillRect(screenX, hitbox.y, hitbox.width, hitbox.height);
+    ctx.strokeRect(screenX, hitbox.y, hitbox.width, hitbox.height);
+    
     ctx.restore();
 }

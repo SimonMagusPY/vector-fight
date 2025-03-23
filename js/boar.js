@@ -21,7 +21,11 @@ export const boar = {
     attackRange: 50,
     isAggressive: false,
     walkFrameCount: 6,    // Walk animation has 6 frames
-    isWalking: false      // Flag for walking state
+    isWalking: false,     // Flag for walking state
+    maxHealth: 100,       // Maximum health
+    damageFlashTimer: 0,  // Timer for damage visual feedback
+    knockbackSpeed: 0,    // Current knockback velocity
+    knockbackDirection: 0 // Direction of knockback
 };
 
 // Initialize the boar
@@ -80,6 +84,27 @@ export function updateBoarAnimation() {
 export function updateBoar(game, player) {
     if (!boar.isActive) return;
     
+    // Handle knockback
+    if (boar.knockbackSpeed > 0) {
+        boar.x += boar.knockbackDirection * boar.knockbackSpeed;
+        boar.knockbackSpeed *= 0.8; // Reduce knockback over time
+        
+        if (boar.knockbackSpeed < 0.5) {
+            boar.knockbackSpeed = 0;
+        }
+        
+        // Keep boar within world bounds
+        if (boar.x < 0) boar.x = 0;
+        if (boar.x > game.world.width) boar.x = game.world.width;
+        
+        // Decrease damage flash timer
+        if (boar.damageFlashTimer > 0) {
+            boar.damageFlashTimer--;
+        }
+        
+        return; // Skip normal movement while in knockback
+    }
+    
     // Calculate distance to player
     const distanceToPlayer = Math.abs(player.x - boar.x);
     
@@ -136,6 +161,15 @@ export function drawBoar(ctx, game) {
     
     // Save context state before applying transformations
     ctx.save();
+    
+    // Apply damage flash effect
+    if (boar.damageFlashTimer > 0) {
+        // Use globalAlpha for flashing effect
+        ctx.globalAlpha = boar.damageFlashTimer % 2 === 0 ? 0.7 : 1;
+        // Or use a red tint
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        ctx.fillRect(screenX - boar.width / 2, boar.y - boar.height / 2, boar.width, boar.height);
+    }
     
     // If facing right (opposite of player), flip the sprite
     if (boar.direction === 1) {
@@ -216,11 +250,25 @@ export function checkBoarCollision(player) {
 export function damageBoar(amount) {
     if (!boar.isActive) return;
     
+    // Reduce health
     boar.health -= amount;
+    
+    // Visual feedback
+    boar.damageFlashTimer = 10; // Flash for 10 frames
+    
+    // Add knockback
+    boar.knockbackSpeed = 8;
+    boar.knockbackDirection = -boar.direction; // Knocked back in opposite direction of facing
     
     // Check if boar is defeated
     if (boar.health <= 0) {
-        boar.isActive = false;
-        // Would implement death animation here
+        defeatBoar();
     }
+}
+
+// Add function to handle boar defeat
+export function defeatBoar() {
+    boar.isActive = false;
+    // You could add death animation or effects here
+    console.log("Boar defeated!");
 }
