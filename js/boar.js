@@ -25,7 +25,11 @@ export const boar = {
     maxHealth: 100,       // Maximum health
     damageFlashTimer: 0,  // Timer for damage visual feedback
     knockbackSpeed: 0,    // Current knockback velocity
-    knockbackDirection: 0 // Direction of knockback
+    knockbackDirection: 0, // Direction of knockback
+    hitFrameCount: 4,      // Update to 4 frames in hit animation
+    isHit: false,          // Flag for hit state
+    hitTimer: 0,           // Timer for hit animation
+    hitDuration: 30        // Slightly increased duration to show all frames
 };
 
 // Initialize the boar
@@ -54,11 +58,19 @@ export async function loadBoarAssets(game) {
         idleImg.onload = () => {
             game.assets.boarIdle = idleImg;
             
-            // Load walk animation after idle is loaded
+            // Load walk animation
             const walkImg = new Image();
             walkImg.onload = () => {
                 game.assets.boarWalk = walkImg;
-                resolve(true);
+                
+                // Load hit animation
+                const hitImg = new Image();
+                hitImg.onload = () => {
+                    game.assets.boarHit = hitImg;
+                    resolve(true);
+                };
+                hitImg.onerror = () => reject(new Error('Failed to load boar hit assets'));
+                hitImg.src = 'assets/sprites/boar/hit.png';
             };
             walkImg.onerror = () => reject(new Error('Failed to load boar walk assets'));
             walkImg.src = 'assets/sprites/boar/walk.png';
@@ -84,7 +96,46 @@ export function updateBoarAnimation() {
 export function updateBoar(game, player) {
     if (!boar.isActive) return;
     
-    // Handle knockback
+    // Handle hit animation
+    if (boar.isHit) {
+        boar.hitTimer++;
+        
+        // Keep the hit animation going for the hit duration
+        if (boar.hitTimer >= boar.hitDuration) {
+            boar.isHit = false;
+            boar.hitTimer = 0;
+            boar.state = 'idle';
+            boar.frameCount = 4; // Reset to idle frame count
+            boar.frameX = 0;
+        }
+        
+        // Handle knockback
+        if (boar.knockbackSpeed > 0) {
+            boar.x += boar.knockbackDirection * boar.knockbackSpeed;
+            boar.knockbackSpeed *= 0.8; // Reduce knockback over time
+            
+            if (boar.knockbackSpeed < 0.5) {
+                boar.knockbackSpeed = 0;
+            }
+            
+            // Keep boar within world bounds
+            if (boar.x < 0) boar.x = 0;
+            if (boar.x > game.world.width) boar.x = game.world.width;
+        }
+        
+        // Update hit animation frame - slower to see all frames
+        boar.frameCounter++;
+        if (boar.frameCounter >= boar.frameDelay/2) { // Make hit animation slightly faster
+            boar.frameCounter = 0;
+            
+            // Progress through all 4 frames
+            boar.frameX = (boar.frameX + 1) % boar.hitFrameCount;
+        }
+        
+        return; // Skip normal movement while in hit state
+    }
+    
+    // Handle knockback (if not in hit state)
     if (boar.knockbackSpeed > 0) {
         boar.x += boar.knockbackDirection * boar.knockbackSpeed;
         boar.knockbackSpeed *= 0.8; // Reduce knockback over time
@@ -145,12 +196,17 @@ export function drawBoar(ctx, game) {
     if (!boar.isActive) return;
     
     // Get the appropriate sprite sheet based on state
-    const spriteSheet = boar.state === 'walk' ? game.assets.boarWalk : game.assets.boarIdle;
+    let spriteSheet;
+    if (boar.isHit) {
+        spriteSheet = game.assets.boarHit;
+    } else {
+        spriteSheet = boar.state === 'walk' ? game.assets.boarWalk : game.assets.boarIdle;
+    }
     
     if (!spriteSheet) return;
     
     // Calculate the single frame width
-    const frameWidth = spriteSheet.width / boar.frameCount;
+    const frameWidth = spriteSheet.width / (boar.isHit ? boar.hitFrameCount : boar.frameCount);
     const frameHeight = spriteSheet.height;
     
     // Calculate boar's position on screen (relative to camera)
@@ -162,13 +218,11 @@ export function drawBoar(ctx, game) {
     // Save context state before applying transformations
     ctx.save();
     
-    // Apply damage flash effect
-    if (boar.damageFlashTimer > 0) {
-        // Use globalAlpha for flashing effect
+    // Remove the red box damage flash effect - the hit animation already provides visual feedback
+    // Only keep a subtle alpha flash if needed
+    if (boar.damageFlashTimer > 0 && !boar.isHit) {
+        // Just use alpha for a subtle flash, no red rectangle
         ctx.globalAlpha = boar.damageFlashTimer % 2 === 0 ? 0.7 : 1;
-        // Or use a red tint
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect(screenX - boar.width / 2, boar.y - boar.height / 2, boar.width, boar.height);
     }
     
     // If facing right (opposite of player), flip the sprite
@@ -194,10 +248,10 @@ export function drawBoar(ctx, game) {
     ctx.restore();
     
     // Draw health bar (optional)
-    if (boar.isAggressive) {
+    if (boar.isAggressive || boar.health < boar.maxHealth) {  // Always show health if damaged
         const healthBarWidth = 80;
         const healthBarHeight = 8;
-        const healthPercentage = boar.health / 100;
+        const healthPercentage = boar.health / boar.maxHealth;
         
         // Health bar background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -253,8 +307,14 @@ export function damageBoar(amount) {
     // Reduce health
     boar.health -= amount;
     
-    // Visual feedback
-    boar.damageFlashTimer = 10; // Flash for 10 frames
+    // Set hit state
+    boar.isHit = true;
+    boar.hitTimer = 0;
+    boar.frameX = 0; // Start at first frame of hit animation
+    boar.state = 'hit';
+    
+    // No need for damageFlashTimer since we're using the hit animation
+    // boar.damageFlashTimer = 10; // Flash for 10 frames
     
     // Add knockback
     boar.knockbackSpeed = 8;
