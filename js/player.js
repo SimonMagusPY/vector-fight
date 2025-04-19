@@ -214,32 +214,67 @@ export function drawPlayer(ctx, game) {
     ctx.restore();
 }
 
-// Add this function to player.js
+// Update in player.js - adjust the getPlayerAttackHitbox function
 export function getPlayerAttackHitbox() {
-    // Attack hitbox is offset in front of the player based on direction
-    const hitboxOffsetX = player.direction === 1 ? player.width / 4 : -player.width / 4 - player.attackHitboxWidth;
+    // Only create a hitbox during specific attack frames
+    if (player.frameX < 2 || player.frameX > 4) {
+        // Return empty/inactive hitbox during frames where sword isn't extended
+        return {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0
+        };
+    }
+    
+    // More precise hitbox based on sword position
+    // Adjust these values to match your specific sprite's sword position
+    
+    // Base hitbox width and position on current animation frame
+    let hitboxWidth = 60; // Default width
+    let offsetX = 50; // Default offset
+    
+    // Frame-specific adjustments for more precise hitbox
+    if (player.frameX === 2) {
+        // Early swing
+        hitboxWidth = 40;
+        offsetX = 40;
+    } else if (player.frameX === 3) {
+        // Middle of swing - longest reach
+        hitboxWidth = 60;
+        offsetX = 50;
+    } else if (player.frameX === 4) {
+        // End of swing
+        hitboxWidth = 50;
+        offsetX = 45;
+    }
+    
+    // Apply direction to offset
+    const hitboxOffsetX = player.direction === 1 ? offsetX : -offsetX - hitboxWidth;
     
     return {
         x: player.x + hitboxOffsetX,
-        y: player.y - player.attackHitboxHeight / 2,
-        width: player.attackHitboxWidth,
-        height: player.attackHitboxHeight
+        y: player.y - 40, // Position hitbox vertically centered on sword (adjust as needed)
+        width: hitboxWidth,
+        height: 80 // Height of the hitbox (adjust as needed)
     };
 }
 
-// Optional: Function to draw the attack hitbox (for debugging)
+// Optional: Updated drawPlayerAttackHitbox for debugging
 export function drawPlayerAttackHitbox(ctx, game) {
     if (!player.isAttacking) return;
     
-    // Only show hitbox in attack frames 2-4 (when sword is swinging)
-    if (player.frameX < 1 || player.frameX > 4) return;
-    
+    // Get current hitbox
     const hitbox = getPlayerAttackHitbox();
+    
+    // Skip drawing if hitbox is inactive (width or height is 0)
+    if (hitbox.width === 0 || hitbox.height === 0) return;
+    
     const screenX = hitbox.x - game.camera.x;
     
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
     ctx.lineWidth = 2;
     
     ctx.fillRect(screenX, hitbox.y, hitbox.width, hitbox.height);

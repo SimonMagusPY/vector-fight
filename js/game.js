@@ -70,10 +70,12 @@ function checkPlayerAttackHit() {
     // Only check during attack animation
     if (!player.isAttacking || player.hasHitTarget) return false;
     
-    // Only register hits during middle frames of attack animation (when sword is extended)
-    if (player.frameX < 2 || player.frameX > 4) return false;
-    
+    // Get hitboxes - the player hitbox function now handles frame-specific checks
     const attackHitbox = getPlayerAttackHitbox();
+    
+    // Skip check if hitbox is inactive (width or height is 0)
+    if (attackHitbox.width === 0 || attackHitbox.height === 0) return false;
+    
     const boarHitbox = {
         x: boar.x - boar.width / 3,
         y: boar.y - boar.height / 3,
